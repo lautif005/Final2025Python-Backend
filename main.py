@@ -93,7 +93,7 @@ def create_fastapi_app() -> FastAPI:
     cors_origins = os.getenv("CORS_ORIGINS", "*").split(",")
     fastapi_app.add_middleware(
         CORSMiddleware,
-        allow_origins=cors_origins if cors_origins != ["*"] else ["*"],
+        allow_origins=["*"], # Forzamos a permitir todo para asegurar que funcione hoy
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -104,11 +104,21 @@ def create_fastapi_app() -> FastAPI:
     fastapi_app.add_middleware(RateLimiterMiddleware, calls=100, period=60)
     logger.info("✅ Rate limiting enabled: 100 requests/60s per IP")
 
-    # Startup event: Check Redis connection
+    # Startup event: Check Redis connection AND CREATE TABLES
     @fastapi_app.on_event("startup")
     async def startup_event():
         """Run on application startup"""
         logger.info("🚀 Starting FastAPI E-commerce API...")
+
+        # --- AQUÍ ESTÁ EL CAMBIO CRÍTICO ---
+        # Creamos las tablas DENTRO del evento de inicio, para que Render lo ejecute siempre
+        try:
+            logger.info("🛠️ Creating database tables...")
+            create_tables()
+            logger.info("✅ Database tables created successfully!")
+        except Exception as e:
+            logger.error(f"❌ Error creating tables: {e}")
+        # -----------------------------------
 
         # Check Redis connection
         if check_redis_connection():
@@ -145,14 +155,9 @@ def run_app(fastapi_app: FastAPI):
     uvicorn.run(fastapi_app, host="0.0.0.0", port=8000)
 
 
-# --- CAMBIO IMPORTANTE: Creamos la app afuera para que Render la vea ---
+# --- Creamos la app afuera para que Render la vea ---
 app = create_fastapi_app() 
 
 if __name__ == "__main__":
-    # Create database tables on startup
-    create_tables()
-    
-    # Run application
+    # Ya no es necesario crear tablas aquí, se hace arriba automáticamente
     run_app(app)
-
-# Corrección para Render v2
