@@ -145,10 +145,14 @@ def run_app(fastapi_app: FastAPI):
     uvicorn.run(fastapi_app, host="0.0.0.0", port=8000)
 
 
+# --- CAMBIO IMPORTANTE: Creamos la app afuera para que Render la vea ---
+app = create_fastapi_app() 
+
 if __name__ == "__main__":
     # Create database tables on startup
     create_tables()
-
-    # Create and run FastAPI application
-    app = create_fastapi_app()
+    
+    # Run application
     run_app(app)
+
+# Corrección para Render v2
